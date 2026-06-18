@@ -1,0 +1,70 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Orchestrator configuration — closed_loop.py reads this file at startup.
+# All thresholds and mappings live here; no hardcoded values in Python code.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── External service URLs ────────────────────────────────────────────────────
+alertmanager_url: "http://localhost:9093"
+prometheus_url: "http://localhost:9090"
+
+# ── Polling & timeouts ───────────────────────────────────────────────────────
+poll_interval_seconds: 15
+runbook_timeout_seconds: 30
+
+# ── Baseline metric snapshot (relative to this config file) ──────────────────
+baseline_path: "../data-pack/data/baseline.json"
+
+# ── Runbook map: alertname → script path (relative to this directory) ────────
+runbook_map:
+  HighLatency:   "runbooks/restart_service.sh"
+  HighErrorRate: "runbooks/clear_cache.sh"
+  InstanceDown:  "runbooks/restart_service.sh"
+  MultiStepDeploy: "runbooks/multi_step_deploy.sh --step-a"
+  TestHallucination: "runbooks/nonexistent_runbook.sh"
+
+# ── Runbook registry: whitelist of allowed scripts (hallucination defense) ───
+runbook_registry:
+  - "runbooks/restart_service.sh"
+  - "runbooks/clear_cache.sh"
+  - "runbooks/scale_replicas.sh"
+  - "runbooks/multi_step_deploy.sh --step-a"
+  - "runbooks/multi_step_deploy.sh --step-b"
+  - "runbooks/multi_step_deploy.sh --step-c"
+  - "runbooks/multi_step_deploy.sh --rollback-a"
+  - "runbooks/multi_step_deploy.sh --rollback-b"
+  - "runbooks/multi_step_deploy.sh --rollback-c"
+
+# ── Rollback map: alertname → rollback script ────────────────────────────────
+# Defaults to the same runbook if not specified here.
+rollback_map:
+  HighLatency:   "runbooks/restart_service.sh"
+  HighErrorRate: "runbooks/restart_service.sh"
+  InstanceDown:  "runbooks/restart_service.sh"
+  MultiStepDeploy: "runbooks/multi_step_deploy.sh --rollback-a"
+
+multi_step_map:
+  MultiStepDeploy:
+    - "runbooks/multi_step_deploy.sh --step-a"
+    - "runbooks/multi_step_deploy.sh --step-b"
+    - "runbooks/multi_step_deploy.sh --step-c"
+
+multi_step_rollback_map:
+  MultiStepDeploy:
+    - "runbooks/multi_step_deploy.sh --rollback-a"
+    - "runbooks/multi_step_deploy.sh --rollback-b"
+    - "runbooks/multi_step_deploy.sh --rollback-c"
+
+
+# ── Blast-radius limits ─────────────────────────────────────────────────────
+blast_radius:
+  # Max total actions across ALL services per minute (sliding window)
+  max_actions_per_minute: 3
+  # Max restarts per individual service per hour (sliding window)
+  max_restarts_per_service_per_hour: 5
+
+# ── Circuit breaker ─────────────────────────────────────────────────────────
+circuit_breaker:
+  # Halt automation after this many consecutive verify failures
+  consecutive_failure_threshold: 3
+  # "manual" = operator must restart the process to reset the breaker
+  reset_mode: manual
