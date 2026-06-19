@@ -99,7 +99,7 @@ Khi tích hợp Trí tuệ Nhân tạo (LLM) vào luồng tự phục hồi hệ
 Để phòng ngừa hoàn toàn rủi ro này, hệ thống triển khai tầng **Decision Validation (Tầng Kiểm duyệt Quyết định)** nghiêm ngặt:
 
 1. **Whitelist Whitelisting (Danh sách Đăng ký Runbook):**
-   - Định nghĩa một danh sách tĩnh `runbook_registry` trong [config.yaml](file:///d:/Cloude-DevOps/Phase-2/aiops-project/w3/lab-closed-loop/tunita2/config.yaml). Chỉ những đường dẫn/runbook nằm trong danh sách này mới được coi là hợp lệ.
+   - Định nghĩa một danh sách tĩnh `runbook_registry` trong [config.yaml](file:///d:/Cloude-DevOps/Phase-2/aiops-project/w3/lab-closed-loop/builetuan/config.yaml). Chỉ những đường dẫn/runbook nằm trong danh sách này mới được coi là hợp lệ.
 
 2. **Cơ chế hoạt động:**
    - Sau khi quyết định khắc phục sự cố được sinh ra (`decide` trả về đường dẫn runbook), hàm `validate_runbook` sẽ lập tức so khớp chuỗi hành động này với `runbook_registry`.

@@ -9,7 +9,7 @@ Xây dựng hệ thống MLOps khép kín: Train V1 → Drift Detection → Retr
 ## Cấu trúc thư mục bài nộp
 
 ```
-tunita2/
+builetuan/
 ├── pipeline.py           # Train IsolationForest + MLflow register
 ├── serve.py              # FastAPI /predict + /health/active-version + /reload
 ├── drift_detector.py     # Evidently DataDriftPreset + Performance drift
@@ -24,7 +24,7 @@ tunita2/
 
 ## Giai đoạn 1: Setup hạ tầng & Train V1
 
-### [NEW] `tunita2/pipeline.py`
+### [NEW] `builetuan/pipeline.py`
 - Train `IsolationForest` trên `data/baseline.csv` (4320 rows)
 - Log params: `contamination=0.03`, `n_estimators=100`, `random_state=42`
 - Log metrics: `train_anomaly_rate`, `feature_count`
@@ -41,14 +41,14 @@ uv pip install 'mlflow==2.13.2' 'evidently==0.4.40' scikit-learn pandas numpy fa
 
 # Train V1
 export MLFLOW_TRACKING_URI=http://localhost:5000
-uv run python tunita2/pipeline.py --data data-pack/data/baseline.csv
+uv run python builetuan/pipeline.py --data data-pack/data/baseline.csv
 ```
 
 ---
 
 ## Giai đoạn 2: Model Server & Drift Detector
 
-### [NEW] `tunita2/serve.py`
+### [NEW] `builetuan/serve.py`
 - FastAPI app, port 8000
 - Startup: load model từ `models:/anomaly-detector@production`
 - `POST /predict` — nhận `{features: [[...], ...]}`, trả `{predictions, scores, version}`
@@ -56,7 +56,7 @@ uv run python tunita2/pipeline.py --data data-pack/data/baseline.csv
 - `POST /reload` — reload model sau swap alias
 - `GET /metrics` — Prometheus metrics (request count, latency histogram)
 
-### [NEW] `tunita2/drift_detector.py`
+### [NEW] `builetuan/drift_detector.py`
 - Wrapper cho Evidently `DataDriftPreset`
 - 3 check modes: `data`, `performance`, `combined`
 - `data`: so sánh feature distribution (Wasserstein/JS divergence)
@@ -66,7 +66,7 @@ uv run python tunita2/pipeline.py --data data-pack/data/baseline.csv
 - Log drift score → MLflow
 - Push metrics → Pushgateway
 
-### [NEW] `tunita2/metrics_util.py`
+### [NEW] `builetuan/metrics_util.py`
 - Helper functions: `push_drift_score()`, `push_model_eval()`, `push_event()`, `push_active_version()`
 - Best-effort push — không crash nếu Pushgateway offline
 
@@ -74,7 +74,7 @@ uv run python tunita2/pipeline.py --data data-pack/data/baseline.csv
 
 ## Giai đoạn 3: Retrain Orchestrator
 
-### [NEW] `tunita2/retrain.py`
+### [NEW] `builetuan/retrain.py`
 - **Step 1**: Load reference + current data
 - **Step 2**: Run `drift_detector.detect_drift()` → nếu no drift → exit
 - **Step 3**: Train V2 trên sliding window (baseline + drift window concat)
@@ -90,7 +90,7 @@ uv run python tunita2/pipeline.py --data data-pack/data/baseline.csv
 
 ## Giai đoạn 4: Documentation
 
-### [NEW] `tunita2/DESIGN.md`
+### [NEW] `builetuan/DESIGN.md`
 7 sub-checkpoints:
 1. **Drift threshold** — 0.15, noise floor 0.04, tại sao
 2. **Drift type** — Data drift vs Concept drift, Evidently detect gì
@@ -100,10 +100,10 @@ uv run python tunita2/pipeline.py --data data-pack/data/baseline.csv
 6. **Sliding window** — So sánh với alternatives
 7. **Auto-rollback** — Threshold 0.65, policy
 
-### [NEW] `tunita2/SUBMIT.md`
+### [NEW] `builetuan/SUBMIT.md`
 5 câu hỏi reflection với số liệu thực từ run
 
-### [NEW] `tunita2/README.md`
+### [NEW] `builetuan/README.md`
 Hướng dẫn chạy pipeline từ đầu đến cuối
 
 ---
@@ -113,19 +113,19 @@ Hướng dẫn chạy pipeline từ đầu đến cuối
 ### Acceptance Criteria 1-3 (Basic)
 ```bash
 # Train V1
-uv run python tunita2/pipeline.py --data data-pack/data/baseline.csv
+uv run python builetuan/pipeline.py --data data-pack/data/baseline.csv
 
 # Serve
-uv run python tunita2/serve.py &
+uv run python builetuan/serve.py &
 curl http://localhost:8000/health/active-version
 
 # Drift detection
-uv run python tunita2/drift_detector.py --reference data-pack/data/baseline.csv --current data-pack/data/drifted.csv
+uv run python builetuan/drift_detector.py --reference data-pack/data/baseline.csv --current data-pack/data/drifted.csv
 ```
 
 ### Acceptance Criterion 4 (Stress 1 — Combined mode)
 ```bash
-uv run python tunita2/drift_detector.py \
+uv run python builetuan/drift_detector.py \
   --reference data-pack/data/baseline.csv \
   --current data-pack/data/drifted.csv \
   --check-mode combined \
@@ -135,7 +135,7 @@ uv run python tunita2/drift_detector.py \
 
 ### Acceptance Criterion 5 (Stress 2 — Holdout validation)
 ```bash
-uv run python tunita2/retrain.py \
+uv run python builetuan/retrain.py \
   --reference data-pack/data/baseline.csv \
   --current data-pack/data/drifted.csv \
   --holdout data-pack/data/holdout.csv \
@@ -144,7 +144,7 @@ uv run python tunita2/retrain.py \
 
 ### Acceptance Criterion 6 (Stress 3 — Auto-rollback)
 ```bash
-uv run python tunita2/retrain.py \
+uv run python builetuan/retrain.py \
   --reference data-pack/data/baseline.csv \
   --current data-pack/data/drifted.csv \
   --holdout data-pack/data/holdout.csv \

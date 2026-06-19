@@ -25,16 +25,16 @@ uv pip install 'mlflow==2.13.2' 'evidently==0.4.40' scikit-learn pandas numpy fa
 export MLFLOW_TRACKING_URI=http://localhost:5000
 
 # 5. Train V1 + register @production
-uv run python tunita2/pipeline.py --data data-pack/data/baseline.csv
+uv run python builetuan/pipeline.py --data data-pack/data/baseline.csv
 
 # 6. Start model server (separate terminal)
-uv run python tunita2/serve.py
+uv run python builetuan/serve.py
 
 # 7. Verify serving
 curl -s http://localhost:8000/health/active-version
 
 # 8. Run full retrain pipeline (drift → train v2 → holdout → approve → promote → monitor)
-uv run python tunita2/retrain.py \
+uv run python builetuan/retrain.py \
     --reference data-pack/data/baseline.csv \
     --current data-pack/data/drifted.csv \
     --holdout data-pack/data/holdout.csv \
