@@ -162,3 +162,5 @@ Thumbs.db
 *data-pack/configs/alertmanager/data/
 *data-pack/configs/grafana/data/
 *data-pack/configs/loki/data/
+*data-pack/
+**/data-pack/
