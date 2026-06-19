@@ -32,6 +32,7 @@ Usage:
 """
 
 import argparse
+import atexit
 import json
 import os
 import sys
@@ -57,6 +58,7 @@ AUDIT_LOG_PATH = os.path.join(
 )
 POST_DEPLOY_CYCLES = 24
 POST_DEPLOY_PREC_THRESHOLD = 0.65  # auto-rollback nếu v2 precision dưới ngưỡng này
+LOCK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "retrain.lock")
 
 
 # ── Utility functions ───────────────────────────────────────────────────────
@@ -213,7 +215,7 @@ def post_deploy_monitor(
 
             f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
             push_model_eval(f"v{v2_version}", precision, recall, f1)
-        except ImportError:
+        except Exception:
             pass
 
         if precision < prec_threshold:
@@ -241,7 +243,7 @@ def post_deploy_monitor(
                 push_event("auto_rollback_v2_to_v1", v2_version)
                 push_active_version(v1_version, "production")
                 push_active_version(v2_version, "archived")
-            except ImportError:
+            except Exception:
                 pass
             return
 
@@ -275,6 +277,21 @@ def main():
         help="Post-deploy eval CSV for auto-rollback monitoring after promotion",
     )
     args = parser.parse_args()
+
+    # ── Mutex Lock check ────────────────────────────────────────────────
+    if os.path.exists(LOCK_FILE):
+        print(f"[retrain] Retraining is already in progress (lock file found: {LOCK_FILE}). Exiting.")
+        sys.exit(0)
+
+    # Register cleanup handler
+    def cleanup_lock():
+        if os.path.exists(LOCK_FILE):
+            os.remove(LOCK_FILE)
+    atexit.register(cleanup_lock)
+
+    # Create lock file
+    with open(LOCK_FILE, "w") as f:
+        f.write(str(os.getpid()))
 
     tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")
 
@@ -377,7 +394,7 @@ def main():
         push_event("retrain_triggered", new_version)
         push_active_version(new_version, "production")
         push_active_version(v1_version, "archived")
-    except ImportError:
+    except Exception:
         pass
 
     # ── Step 8: Post-deploy monitor ─────────────────────────────────────
